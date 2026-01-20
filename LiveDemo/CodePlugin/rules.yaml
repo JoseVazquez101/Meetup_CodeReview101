@@ -1,0 +1,73 @@
+rules:
+
+# 1) CONCATENACIÓN DIRECTA EN SQL
+- id: php-sql-string-concat
+  languages: [php]
+  severity: WARNING
+  message: |
+    Possible SQL injection via string concatenation in SQL query.
+  pattern-either:
+    - pattern: $DB->query("..." . $VAR)
+    - pattern: $DB->query('...' . $VAR)
+    - pattern: mysqli_query($DB, "..." . $VAR)
+    - pattern: mysqli_query($DB, '...' . $VAR)
+    - pattern: $WPDB->query("..." . $VAR)
+    - pattern: $WPDB->query('...' . $VAR)
+    - pattern: $WPDB->get_results("..." . $VAR)
+    - pattern: $WPDB->get_results('...' . $VAR)
+
+# 2) INPUT DE USUARIO DIRECTO EN SQL
+- id: user-input-direct-sql
+  languages: [php]
+  severity: ERROR
+  message: |
+    Direct user input ($_GET/$_POST/$_REQUEST) used in SQL query.
+  pattern-either:
+    - pattern: $DB->query("..." . $_GET[$X])
+    - pattern: $DB->query("..." . $_POST[$X])
+    - pattern: $DB->query("..." . $_REQUEST[$X])
+    - pattern: mysqli_query($DB, "..." . $_GET[$X])
+    - pattern: mysqli_query($DB, "..." . $_POST[$X])
+
+# 3) wpdb->prepare USADO PARA IDENTIFICADORES
+- id: wpdb-prepare-identifier-injection
+  languages: [php]
+  severity: ERROR
+  message: |
+    wpdb->prepare() uses string placeholders (%s or %1$s) for SQL identifiers
+    (table or column names). prepare() does NOT escape identifiers.
+    This can lead to SQL injection.
+  patterns:
+    - pattern: $WPDB->prepare($QUERY, ...)
+    - pattern-regex: |
+        (?i)(UPDATE|FROM|INTO|SET)\s+[^'"]*%(\d+\$)?s
+
+# 4) UPDATE CON COLUMNAS DINÁMICAS (PARA WP)
+- id: wpdb-update-dynamic-column
+  languages: [php]
+  severity: ERROR
+  message: |
+    Dynamic table or column name used in SQL UPDATE via wpdb->prepare().
+    Identifiers must be whitelisted, not passed as %s.
+  pattern-regex: |
+    (?is)\$wpdb->prepare\s*\(\s*['"].*UPDATE.*SET.*%(\d+\$)?s.*['"]
+
+# 5) SELECT / FROM CON TABLAS DINÁMICAS
+- id: wpdb-dynamic-table-select
+  languages: [php]
+  severity: ERROR
+  message: |
+    Dynamic table name used in SELECT/FROM clause via wpdb->prepare().
+    Table names must be hardcoded or whitelisted.
+  pattern-regex: |
+    (?is)\$wpdb->prepare\s*\(\s*['"].*FROM.*%(\d+\$)?s.*['"]
+
+# 6) PREPARE CON MÚLTIPLES PLACEHOLDERS DE STRING
+- id: wpdb-prepare-multiple-string-placeholders
+  languages: [php]
+  severity: WARNING
+  message: |
+    wpdb->prepare() uses multiple string placeholders.
+    Review if any of them are used as identifiers (table/column names).
+  pattern-regex: |
+    (?is)\$wpdb->prepare\s*\(\s*['"].*%s.*%s.*['"]
