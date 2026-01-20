@@ -27,5 +27,6 @@ docker run --rm -v "$PWD:/src" semgrep/semgrep semgrep --config <rule> notificat
 - Para desplegar:
 
 ~~~bash
+cd Actividad
 docker-compose up -d
 ~~~
